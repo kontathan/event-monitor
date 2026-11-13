@@ -11,7 +11,7 @@ struct SettingsView: View {
             GeneralSettingsView()
                 .tabItem { Label("Allgemein", systemImage: "gearshape") }
         }
-        .frame(width: 600, height: 460)
+        .frame(width: 620, height: 560)
     }
 }
 
@@ -115,6 +115,23 @@ struct SourcesSettingsView: View {
             }
 
             Section {
+                ForEach(model.recommendedSources, id: \.id) { source in
+                    Toggle(isOn: builtInBinding(source.id)) {
+                        VStack(alignment: .leading) {
+                            Text(source.displayName)
+                            Text("\(source.city.displayName) · \(source.feed.url.host() ?? "")")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                Text("Empfohlene Orte")
+            } footer: {
+                Text("Kulturorte mit offenem Kalender, die direkt eingelesen werden.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section {
                 ForEach($model.settings.customFeeds) { $feed in
                     HStack {
                         Toggle("", isOn: $feed.isEnabled).labelsHidden()
@@ -123,7 +140,7 @@ struct SourcesSettingsView: View {
                             Text(feed.url.absoluteString).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
-                        CityBadge(city: feed.city)
+                        Text(feed.city.displayName).foregroundStyle(.secondary)
                         Button(role: .destructive) {
                             model.settings.customFeeds.removeAll { $0.id == feed.id }
                         } label: {
@@ -133,7 +150,7 @@ struct SourcesSettingsView: View {
                     }
                 }
                 TextField("Name", text: $feedName, prompt: Text("z. B. Lieblingsclub"))
-                TextField("Adresse", text: $feedURL, prompt: Text("https://… oder webcal://…"))
+                TextField("Adresse", text: $feedURL, prompt: Text("iCal-Feed oder Webseite"))
                 Picker("Stadt", selection: $feedCity) {
                     ForEach(City.allCases) { Text($0.displayName).tag($0) }
                 }
@@ -143,9 +160,9 @@ struct SourcesSettingsView: View {
                         .disabled(ICalFeed.normalizedURL(from: feedURL) == nil)
                 }
             } header: {
-                Text("Eigene Kalender (iCal / .ics)")
+                Text("Eigene Kalender & Webseiten")
             } footer: {
-                Text("Viele Clubs, Theater und Vereine bieten ihre Termine als iCal-Feed an. Änderungen gelten ab dem nächsten Scan (⌘R).")
+                Text("Unterstützt iCal-Feeds (.ics, webcal://) und Webseiten mit eingebetteten schema.org-Veranstaltungsdaten. Änderungen gelten ab dem nächsten Scan (⌘R).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -154,11 +171,7 @@ struct SourcesSettingsView: View {
     }
 
     private func builtInBinding(_ id: String) -> Binding<Bool> {
-        Binding {
-            !model.settings.disabledSourceIDs.contains(id)
-        } set: { enabled in
-            if enabled { model.settings.disabledSourceIDs.remove(id) } else { model.settings.disabledSourceIDs.insert(id) }
-        }
+        Binding { model.isSourceEnabled(id) } set: { model.setSource(id, enabled: $0) }
     }
 
     private func addFeed() {
@@ -179,6 +192,25 @@ struct GeneralSettingsView: View {
         @Bindable var model = model
 
         Form {
+            Section {
+                LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)],
+                          alignment: .leading, spacing: 8) {
+                    ForEach(EventCategory.allCases) { category in
+                        Toggle(isOn: Binding(get: { model.isInterest(category) },
+                                             set: { _ in model.toggleInterest(category) })) {
+                            Label(category.title, systemImage: category.symbol)
+                        }
+                        .toggleStyle(.checkbox)
+                    }
+                }
+            } header: {
+                Text("Meine Interessen")
+            } footer: {
+                Text("Diese Kategorien erscheinen in der Seitenleiste gesammelt unter „Meine Interessen“.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Picker("Vorschau-Zeitraum", selection: $model.settings.scanDays) {
                 Text("14 Tage").tag(14)
                 Text("30 Tage").tag(30)

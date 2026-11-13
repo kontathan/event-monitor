@@ -234,7 +234,8 @@ extension Calendar {
     }
 }
 
-/// Ein vom Nutzer eingetragener iCal-Feed als Quelle.
+/// Ein eingetragener Kalender als Quelle: iCal-Feed (.ics) oder – falls die Adresse eine
+/// normale Webseite ist – deren eingebettete schema.org-Veranstaltungsdaten.
 public struct ICalEventSource: EventSource {
     public let feed: ICalFeed
     public var id: String { "ical:\(feed.id.uuidString)" }
@@ -247,6 +248,9 @@ public struct ICalEventSource: EventSource {
         let data = try HTTP.checked(try await client.fetch(HTTP.request(feed.url)))
         let text = String(decoding: data, as: UTF8.self)
         let horizon = Date.now.addingTimeInterval(TimeInterval(days) * 86_400)
-        return ICalendar.parse(text, city: feed.city, sourceID: id).filter { $0.start <= horizon }
+        let events = text.contains("BEGIN:VCALENDAR")
+            ? ICalendar.parse(text, city: feed.city, sourceID: id)
+            : SchemaOrgEvents.parse(html: text, baseURL: feed.url, city: feed.city, sourceID: id)
+        return events.filter { $0.start <= horizon }
     }
 }

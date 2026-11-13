@@ -148,10 +148,36 @@ private func event(_ title: String, venue: String? = nil, series: String = "s", 
         ("Liedfett – Club Tour", "Konzerte / Musik | Gläubige", .konzert),
         ("Blind Date mit Wiesbaden", "Führungen | Wein", .fuehrung),
         ("QiGong - jeden Freitag", nil, .sport),
+        ("Podiumsdiskussion zur Kommunalwahl", nil, .politik),
+        ("Nicht nur zur Weihnachtszeit | Lesung und Diskussion", nil, .politik),
+        ("Gedenken an die Opfer des Nationalsozialismus", nil, .geschichte),
+        ("Die Römer in Mainz", nil, .geschichte),
+        ("Vernissage: Zwischen Haut und Horizont", nil, .ausstellung),
+        ("Weihnachtsgeschichten für Kinder", nil, .kinder),
+        ("Infoabend Studium", nil, .bildung),
         ("Irgendwas Neues", nil, .sonstiges)
     ] as [(String, String?, EventCategory)])
     func categorizes(title: String, kicker: String?, expected: EventCategory) {
         #expect(Categorizer.category(kicker: kicker, title: title, text: nil) == expected)
+    }
+
+    @Test func venueHelpsWhenTitleIsVague() {
+        #expect(Categorizer.category(kicker: nil, title: "Open Sunday", venue: "Kunsthalle Mainz", text: nil) == .ausstellung)
+        #expect(Categorizer.category(kicker: nil, title: "Abendprogramm", venue: "Landesmuseum Mainz", text: nil) == .geschichte)
+        #expect(Categorizer.category(kicker: nil, title: "Treffen", venue: "Haus des Erinnerns", text: nil) == .politik)
+        // Der Titel hat Vorrang vor dem Ort.
+        #expect(Categorizer.category(kicker: nil, title: "Orgelkonzert", venue: "Landesmuseum Mainz", text: nil) == .konzert)
+    }
+
+    @Test func universityNameIsNotHistory() {
+        #expect(Categorizer.category(kicker: nil, title: "Infoabend", venue: "Johannes Gutenberg-Universität", text: nil) != .geschichte)
+    }
+
+    @Test func textOnlyMatchesSpecificWords() {
+        // „Sie haben die Wahl“ ist keine Politik, „Geschichten“ keine Geschichte.
+        #expect(Categorizer.category(kicker: nil, title: "Live Video-Chat", text: "Sie haben die Wahl: zuhören oder fragen.") == .sonstiges)
+        #expect(Categorizer.category(kicker: nil, title: "Quizabend", text: "Lustige Geschichten und Fragen") == .sonstiges)
+        #expect(Categorizer.category(kicker: nil, title: "Abend im Hof", text: "Ein Blick in die Geschichte des Hauses") == .geschichte)
     }
 
     @Test func meaninglessKickerIsIgnored() {
@@ -192,6 +218,10 @@ private func event(_ title: String, venue: String? = nil, series: String = "s", 
         #expect(settings.scanDays == 14)
         #expect(settings.exclusionRules.isEmpty)
         #expect(settings.autoScanOnLaunch)
+        #expect(settings.interests.isEmpty)
+
+        let withInterests = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"interests": ["politik", "konzert"]}"#.utf8))
+        #expect(withInterests.interests == [.politik, .konzert])
     }
 
     @Test func scannerReportsFailuresAndAppliesRules() async {

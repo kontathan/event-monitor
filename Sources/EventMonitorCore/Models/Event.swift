@@ -4,6 +4,7 @@ import Foundation
 public enum City: String, Codable, CaseIterable, Identifiable, Sendable {
     case mainz
     case wiesbaden
+    case frankfurt
 
     public var id: String { rawValue }
 
@@ -11,6 +12,7 @@ public enum City: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .mainz: "Mainz"
         case .wiesbaden: "Wiesbaden"
+        case .frankfurt: "Frankfurt"
         }
     }
 }
@@ -33,6 +35,8 @@ public struct Event: Codable, Identifiable, Hashable, Sendable {
     /// Kategorie-Bezeichnung, wie sie die Quelle liefert (z. B. „Konzerte / Musik“).
     public var sourceCategory: String?
     public var category: EventCategory
+    /// Eintritt, falls die Quelle ihn nennt (sonst evtl. später von der Detailseite nachgeladen).
+    public var price: PriceInfo?
     public var sourceID: String
 
     public init(
@@ -48,6 +52,7 @@ public struct Event: Codable, Identifiable, Hashable, Sendable {
         url: URL? = nil,
         sourceCategory: String? = nil,
         category: EventCategory? = nil,
+        price: PriceInfo? = nil,
         sourceID: String
     ) {
         self.id = id
@@ -61,8 +66,17 @@ public struct Event: Codable, Identifiable, Hashable, Sendable {
         self.isAllDay = isAllDay
         self.url = url
         self.sourceCategory = sourceCategory
-        self.category = category ?? Categorizer.category(kicker: sourceCategory, title: title, text: summary)
+        self.category = category ?? Categorizer.category(kicker: sourceCategory, title: title, venue: venue, text: summary)
+        self.price = price ?? PriceParser.parse([title, summary ?? ""].joined(separator: "\n"))
         self.sourceID = sourceID
+    }
+
+    /// Kategorie neu bestimmen – z. B. nach Änderungen an den Stichwörtern für zwischengespeicherte Termine.
+    public func recategorized() -> Event {
+        var copy = self
+        copy.category = Categorizer.category(kicker: sourceCategory, title: title, venue: venue, text: summary)
+        if copy.price == nil { copy.price = PriceParser.parse([title, summary ?? ""].joined(separator: "\n")) }
+        return copy
     }
 
     /// Geschätztes Ende: echtes Ende, sonst Tagesende (ganztägig) bzw. Start + 2 Stunden.

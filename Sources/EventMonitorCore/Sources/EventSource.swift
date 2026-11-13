@@ -66,4 +66,19 @@ public enum BuiltInSources {
     )
 
     public static let all: [SiteparkEventSource] = [mainz, wiesbaden]
+
+    /// Ausgewählte Orte mit offenem Kalender (iCal oder schema.org). Lassen sich in den Einstellungen abschalten.
+    public static let recommendedFeeds: [ICalFeed] = [
+        ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1001")!, name: "Haus Mainusch",
+                 url: URL(string: "https://haus-mainusch.de/events.ics")!, city: .mainz),
+        ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1002")!,
+                 name: "Haus des Erinnerns – für Demokratie und Akzeptanz",
+                 url: URL(string: "https://www.haus-des-erinnerns-mainz.de/events/?ical=1")!, city: .mainz),
+        ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1003")!, name: "Kulturbäckerei Mainz",
+                 url: URL(string: "https://kulturbaeckerei-mainz.de/veranstaltung/feed/ical/")!, city: .mainz),
+        ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1004")!, name: "Kreativfabrik Wiesbaden",
+                 url: URL(string: "https://kreativfabrik-wiesbaden.de/veranstaltungen/?ical=1")!, city: .wiesbaden),
+        ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1005")!, name: "ZOOM Frankfurt",
+                 url: URL(string: "https://zoomfrankfurt.com/")!, city: .frankfurt)
+    ]
 }

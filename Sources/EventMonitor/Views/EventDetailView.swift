@@ -8,99 +8,93 @@ struct EventDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 6) {
                     Label(event.category.title, systemImage: event.category.symbol)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(event.category.color)
-                        .font(.callout.weight(.semibold))
-                    CityBadge(city: event.city)
+                    Text(event.title)
+                        .font(.title.weight(.semibold))
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Text(event.title)
-                    .font(.largeTitle.weight(.bold))
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 10, verticalSpacing: 8) {
-                    infoRow("calendar", Fmt.longDate(event.start))
-                    infoRow("clock", Fmt.timeRange(event))
-                    if let venue = event.venue {
-                        infoRow("mappin.and.ellipse", "\(venue), \(event.city.displayName)")
-                    }
-                    if let source = event.sourceCategory {
-                        infoRow("tag", source)
-                    }
+                VStack(alignment: .leading, spacing: 10) {
+                    InfoRow(symbol: "calendar", text: Fmt.longDate(event.start))
+                    InfoRow(symbol: "clock", text: Fmt.timeRange(event))
+                    InfoRow(symbol: "mappin.and.ellipse", text: Fmt.place(event))
+                    InfoRow(symbol: "eurosign", text: priceText, highlight: model.price(for: event)?.kind == .free)
                 }
-                .font(.title3)
 
                 actions
 
                 if let summary = event.summary {
-                    Divider()
                     Text(summary)
-                        .font(.body)
                         .lineSpacing(3)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                    if summary.hasSuffix("…") || summary.hasSuffix("...") {
-                        Text("Gekürzt – die vollständige Beschreibung steht auf der Website.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
 
-                Divider()
-                Text("Quelle: \(model.sourceName(for: event.sourceID)). Alle Angaben ohne Gewähr – bitte beim Veranstalter prüfen.")
+                Text("Quelle: \(model.sourceName(for: event.sourceID)) · Angaben ohne Gewähr")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
-            .padding(28)
-            .frame(maxWidth: 680, alignment: .leading)
+            .padding(32)
+            .frame(maxWidth: 640, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .task(id: event.id) { await model.loadPriceIfNeeded(for: event) }
+    }
+
+    private var priceText: String {
+        if let label = model.price(for: event)?.label { return label }
+        if model.price(for: event)?.kind == .unknown || !isCityCalendar { return "Keine Preisangabe" }
+        return "Preis wird geladen …"
+    }
+
+    private var isCityCalendar: Bool {
+        model.builtInSources.contains { $0.id == event.sourceID }
     }
 
     private var actions: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             if let url = event.url {
-                Button {
-                    openURL(url)
-                } label: {
-                    Label("Zur Website", systemImage: "safari")
-                }
-                .buttonStyle(.borderedProminent)
+                Button("Website") { openURL(url) }
+                    .buttonStyle(.borderedProminent)
             }
-            Button {
-                model.addToCalendar(event)
-            } label: {
-                Label("In Kalender", systemImage: "calendar.badge.plus")
-            }
-            .help("Als .ics-Datei exportieren und in der Kalender-App öffnen")
+            Button("Zum Kalender") { model.addToCalendar(event) }
+                .help("Als .ics-Datei in der Kalender-App öffnen")
             if let mapURL = model.mapURL(for: event) {
-                Button {
-                    openURL(mapURL)
-                } label: {
-                    Label("Karte", systemImage: "map")
-                }
-                .help("Ort bei OpenStreetMap suchen")
+                Button("Karte") { openURL(mapURL) }
+                    .help("Ort bei OpenStreetMap zeigen")
             }
+            Spacer()
             Menu {
                 ExcludeMenuItems(event: event)
             } label: {
-                Label("Ausschließen", systemImage: "eye.slash")
+                Image(systemName: "eye.slash")
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .fixedSize()
-            .help("Diese oder ähnliche Veranstaltungen künftig nicht mehr anzeigen")
+            .help("Ausblenden …")
         }
-        .controlSize(.large)
     }
+}
 
-    private func infoRow(_ symbol: String, _ text: String) -> some View {
-        GridRow {
+private struct InfoRow: View {
+    let symbol: String
+    let text: String
+    var highlight = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: symbol)
                 .foregroundStyle(.secondary)
-                .frame(width: 22)
-            Text(text).textSelection(.enabled)
+                .frame(width: 18)
+            Text(text)
+                .foregroundStyle(highlight ? Color.green : Color.primary)
+                .textSelection(.enabled)
         }
     }
 }
@@ -114,39 +108,33 @@ struct ExclusionDraftSheet: View {
     private var trimmed: String { draft.text.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Nach Stichwort ausschließen")
-                .font(.title2.weight(.semibold))
-            Text("Alle Veranstaltungen, deren Titel bzw. Ort dieses Stichwort enthält, werden ab sofort und bei künftigen Scans ausgeblendet. Groß-/Kleinschreibung und Umlaute spielen keine Rolle.")
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Picker("Prüfen in", selection: $draft.kind) {
-                Text("Titel").tag(ExclusionRule.Kind.titleContains)
-                Text("Ort").tag(ExclusionRule.Kind.venueContains)
-            }
-            .pickerStyle(.segmented)
-
-            TextField("Stichwort, z. B. „Wochenmarkt“", text: $draft.text)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit(save)
-
-            let matches = model.events.filter { ExclusionRule(kind: draft.kind, value: trimmed).matches($0) }.count
-            Text(trimmed.isEmpty ? " " : "Betrifft aktuell \(matches) Termin(e).")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-
-            HStack {
-                Spacer()
-                Button("Abbrechen", role: .cancel) { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Ausschließen", action: save)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(trimmed.isEmpty)
+        Form {
+            Section {
+                Picker("Suchen in", selection: $draft.kind) {
+                    Text("Titel").tag(ExclusionRule.Kind.titleContains)
+                    Text("Ort").tag(ExclusionRule.Kind.venueContains)
+                }
+                .pickerStyle(.segmented)
+                TextField("Stichwort", text: $draft.text, prompt: Text("z. B. Wochenmarkt"))
+                    .onSubmit(save)
+            } header: {
+                Text("Nach Stichwort ausblenden")
+            } footer: {
+                let matches = model.events.filter { ExclusionRule(kind: draft.kind, value: trimmed).matches($0) }.count
+                Text(trimmed.isEmpty ? "Gilt ab sofort und für alle künftigen Scans."
+                                     : "Betrifft aktuell \(matches) Termin(e). Gilt auch für künftige Scans.")
+                    .foregroundStyle(.secondary)
             }
         }
-        .padding(22)
-        .frame(width: 460)
+        .formStyle(.grouped)
+        .frame(width: 440)
+        .fixedSize(horizontal: false, vertical: true)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Ausblenden", action: save).disabled(trimmed.isEmpty)
+            }
+        }
     }
 
     private func save() {

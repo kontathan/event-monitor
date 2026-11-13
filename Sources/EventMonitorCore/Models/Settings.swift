@@ -37,6 +37,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     /// Wie viele Tage im Voraus gescannt wird.
     public var scanDays: Int = 60
     public var autoScanOnLaunch: Bool = true
+    /// Kategorien, die unter „Meine Interessen“ zusammengefasst werden.
+    public var interests: Set<EventCategory> = []
 
     public init() {}
 
@@ -48,6 +50,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         disabledSourceIDs = try c.decodeIfPresent(Set<String>.self, forKey: .disabledSourceIDs) ?? []
         scanDays = try c.decodeIfPresent(Int.self, forKey: .scanDays) ?? 60
         autoScanOnLaunch = try c.decodeIfPresent(Bool.self, forKey: .autoScanOnLaunch) ?? true
+        interests = try c.decodeIfPresent(Set<EventCategory>.self, forKey: .interests) ?? []
     }
 }
 

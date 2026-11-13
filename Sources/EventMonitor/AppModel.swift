@@ -4,7 +4,7 @@ import Foundation
 import Observation
 
 enum TimeFilter: String, CaseIterable, Identifiable {
-    case all, today, tomorrow, weekend, week
+    case all, today, tomorrow, weekend, week, twoWeeks
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum TimeFilter: String, CaseIterable, Identifiable {
         case .tomorrow: "Morgen"
         case .weekend: "Wochenende"
         case .week: "Nächste 7 Tage"
+        case .twoWeeks: "Nächste 14 Tage"
         }
     }
 
@@ -30,6 +31,8 @@ enum TimeFilter: String, CaseIterable, Identifiable {
             return DateInterval(start: day(1), end: day(2))
         case .week:
             return DateInterval(start: today, end: day(7))
+        case .twoWeeks:
+            return DateInterval(start: today, end: day(14))
         case .weekend:
             // Freitag 17 Uhr bis Sonntag Mitternacht. Weekday: 1 = So … 7 = Sa.
             let weekday = calendar.component(.weekday, from: today)
@@ -43,6 +46,7 @@ enum TimeFilter: String, CaseIterable, Identifiable {
 
 enum SidebarSelection: Hashable {
     case all
+    case interests
     case category(EventCategory)
 }
 
@@ -83,29 +87,46 @@ final class AppModel {
     /// Kurze Rückmeldung nach einem Ausschluss (mit Rückgängig).
     var lastAddedRule: ExclusionRule?
 
+    /// Von Detailseiten nachgeladene Preise, je Veranstaltungsreihe (`seriesID`).
+    private(set) var loadedPrices: [String: PriceInfo] = [:]
+    private var priceRequests = Set<String>()
+    private let priceLoader = DetailPriceLoader()
+    private var pricesSaveScheduled = false
+
     init(store: JSONStore = .standard) {
         self.store = store
         settings = store.load(AppSettings.self, from: "settings.json") ?? AppSettings()
         if let cache = store.load(EventCache.self, from: "events.json") {
-            events = cache.events
+            // Kategorien neu bestimmen, falls sich die Stichwörter seit dem letzten Scan geändert haben.
+            events = cache.events.map { $0.recategorized() }
             lastScan = cache.scannedAt
         }
+        loadedPrices = store.load([String: PriceInfo].self, from: "prices.json") ?? [:]
+        if !settings.interests.isEmpty { sidebarSelection = .interests }
     }
 
     // MARK: - Quellen & Scan
 
     var builtInSources: [SiteparkEventSource] { BuiltInSources.all }
+    var recommendedSources: [ICalEventSource] { BuiltInSources.recommendedFeeds.map(ICalEventSource.init) }
 
     var activeSources: [any EventSource] {
-        let builtIns: [any EventSource] = builtInSources.filter { !settings.disabledSourceIDs.contains($0.id) }
+        let disabled = settings.disabledSourceIDs
+        let builtIns: [any EventSource] = builtInSources.filter { !disabled.contains($0.id) }
+        let recommended: [any EventSource] = recommendedSources.filter { !disabled.contains($0.id) }
         let feeds: [any EventSource] = settings.customFeeds.filter(\.isEnabled).map(ICalEventSource.init)
-        return builtIns + feeds
+        return builtIns + recommended + feeds
     }
 
     func sourceName(for id: String) -> String {
-        activeSources.first { $0.id == id }?.displayName
-            ?? builtInSources.first { $0.id == id }?.displayName
-            ?? "Eigener Kalender"
+        let all: [any EventSource] = builtInSources + recommendedSources + settings.customFeeds.map(ICalEventSource.init)
+        return all.first { $0.id == id }?.displayName ?? "Eigener Kalender"
+    }
+
+    func isSourceEnabled(_ id: String) -> Bool { !settings.disabledSourceIDs.contains(id) }
+
+    func setSource(_ id: String, enabled: Bool) {
+        if enabled { settings.disabledSourceIDs.remove(id) } else { settings.disabledSourceIDs.insert(id) }
     }
 
     func scan() async {
@@ -128,7 +149,10 @@ final class AppModel {
 
     func scanOnLaunchIfNeeded() async {
         let stale = lastScan.map { Date.now.timeIntervalSince($0) > 3 * 3600 } ?? true
-        if events.isEmpty || (settings.autoScanOnLaunch && stale) {
+        // Neu hinzugekommene Quellen sollen sofort Termine liefern.
+        let scannedSources = Set(events.map(\.sourceID))
+        let hasNewSource = activeSources.contains { !scannedSources.contains($0.id) }
+        if events.isEmpty || (settings.autoScanOnLaunch && (stale || hasNewSource)) {
             await scan()
         }
     }
@@ -181,8 +205,26 @@ final class AppModel {
 
     var visibleEvents: [Event] {
         let base = eventsIgnoringCategory
-        guard case .category(let category) = sidebarSelection else { return base }
-        return base.filter { $0.category == category }
+        switch sidebarSelection {
+        case .category(let category): return base.filter { $0.category == category }
+        case .interests: return base.filter { settings.interests.contains($0.category) }
+        case .all, nil: return base
+        }
+    }
+
+    // MARK: - Meine Interessen
+
+    func isInterest(_ category: EventCategory) -> Bool {
+        settings.interests.contains(category)
+    }
+
+    func toggleInterest(_ category: EventCategory) {
+        if settings.interests.contains(category) {
+            settings.interests.remove(category)
+            if settings.interests.isEmpty && sidebarSelection == .interests { sidebarSelection = .all }
+        } else {
+            settings.interests.insert(category)
+        }
     }
 
     var categoryCounts: [EventCategory: Int] {
@@ -208,6 +250,35 @@ final class AppModel {
         timeFilter = .all
         sidebarSelection = .all
         searchText = ""
+    }
+
+    // MARK: - Preise
+
+    func price(for event: Event) -> PriceInfo? {
+        event.price ?? loadedPrices[event.seriesID]
+    }
+
+    /// Lädt den Preis von der Detailseite, falls die Quelle ihn nicht direkt nennt (nur Stadtkalender).
+    func loadPriceIfNeeded(for event: Event) async {
+        let key = event.seriesID
+        guard event.price == nil, loadedPrices[key] == nil, !priceRequests.contains(key),
+              let url = event.url, builtInSources.contains(where: { $0.id == event.sourceID })
+        else { return }
+        priceRequests.insert(key)
+        defer { priceRequests.remove(key) }
+        guard let price = await priceLoader.price(from: url) else { return }
+        loadedPrices[key] = price
+        schedulePricesSave()
+    }
+
+    private func schedulePricesSave() {
+        guard !pricesSaveScheduled else { return }
+        pricesSaveScheduled = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            pricesSaveScheduled = false
+            try? store.save(loadedPrices, to: "prices.json")
+        }
     }
 
     // MARK: - Aktionen

@@ -2,13 +2,16 @@
 
 <img src="Resources/AppIcon.png" alt="Logo" width="128">
 
-Eine schlanke, quelloffene macOS-App, die Veranstaltungen in **Mainz** und **Wiesbaden** an einem Ort zeigt –
-Konzerte, Flohmärkte, Theater, Führungen, Ausstellungen, Feste und mehr.
+Eine schlanke, quelloffene macOS-App, die Veranstaltungen in **Mainz**, **Wiesbaden** und **Frankfurt** an einem Ort
+zeigt – Konzerte, Flohmärkte, Theater, Demos, Vorträge, Ausstellungen, Geschichte und mehr.
 
 ## Funktionen
 
 - **Beide Städte in einer Liste**, nach Tagen gruppiert („Heute“, „Morgen“, …)
-- **Filter** nach Stadt, Zeitraum (Heute, Morgen, Wochenende, 7 Tage) und Kategorie
+- **Filter** nach Stadt, Zeitraum (Heute, Morgen, Wochenende, 7 oder 14 Tage) und Kategorie
+- **Meine Interessen**: eigene Lieblingskategorien gesammelt in der Seitenleiste
+- **Preise**: „Kostenlos“, „12 €“ oder „8–15 €“ direkt in der Liste – aus dem Beschreibungstext oder
+  (bei den Stadtkalendern) von der Detailseite nachgeladen, sobald ein Termin sichtbar ist
 - **Suche** über Titel, Ort und Beschreibung
 - **Ausschließen** per Rechtsklick oder Knopf in der Detailansicht:
   - eine Veranstaltung mit allen ihren Terminen (z. B. ein wöchentlicher Kurs)
@@ -20,7 +23,7 @@ Konzerte, Flohmärkte, Theater, Führungen, Ausstellungen, Feste und mehr.
   *Einstellungen → Ausschlüsse* (⌘,). Direkt nach einem Ausschluss gibt es „Rückgängig“.
 - **In Kalender übernehmen** als `.ics`-Datei (funktioniert mit jeder Kalender-App)
 - **Karte** über OpenStreetMap
-- **Eigene iCal-Feeds** (`.ics`/`webcal://`) von Clubs, Theatern oder Vereinen hinzufügen
+- **Eigene Quellen**: iCal-Feeds (`.ics`/`webcal://`) oder Webseiten mit schema.org-Veranstaltungsdaten
 
 ## Datenquellen
 
@@ -28,7 +31,14 @@ Konzerte, Flohmärkte, Theater, Führungen, Ausstellungen, Feste und mehr.
 | --- | --- |
 | Veranstaltungskalender der Landeshauptstadt Mainz (mainz.de) | öffentliche Such-Schnittstelle der Website (`/api/graphql/`) |
 | Veranstaltungskalender der Landeshauptstadt Wiesbaden (wiesbaden.de) | dieselbe Schnittstelle (beide Städte nutzen das gleiche CMS) |
-| Eigene Kalender | iCalendar (RFC 5545) |
+| Haus Mainusch, Haus des Erinnerns, Kulturbäckerei (Mainz), Kreativfabrik (Wiesbaden) | iCalendar (RFC 5545) |
+| ZOOM (Frankfurt) | schema.org-Daten (JSON-LD) auf der Website |
+| Eigene Kalender | iCalendar oder schema.org |
+
+Für Frankfurt gibt es keinen offenen städtischen Kalender (frankfurt.de ist zudem gegen automatische Abrufe
+geschützt); die Stadt ist daher vor allem über einzelne Orte und eigene Quellen abgedeckt. Öffentliche Listen
+angemeldeter Demonstrationen veröffentlichen die drei Städte nicht – Demos erscheinen, wenn eine Quelle sie
+ankündigt, und werden dann der Kategorie „Demos & Kundgebungen“ zugeordnet.
 
 Die App fragt genau die Daten ab, die die Websites selbst im Browser laden, und verlinkt immer auf die
 Originalseite. Die Schnittstelle ist nicht offiziell dokumentiert und kann sich ändern – dann muss
