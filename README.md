@@ -33,6 +33,7 @@ zeigt – Konzerte, Flohmärkte, Theater, Demos, Vorträge, Ausstellungen, Gesch
 | Veranstaltungskalender der Landeshauptstadt Wiesbaden (wiesbaden.de) | dieselbe Schnittstelle (beide Städte nutzen das gleiche CMS) |
 | Haus Mainusch, Haus des Erinnerns, Kulturbäckerei (Mainz), Kreativfabrik (Wiesbaden) | iCalendar (RFC 5545) |
 | ZOOM (Frankfurt) | schema.org-Daten (JSON-LD) auf der Website |
+| Frankfurter Info (linkes Terminportal Frankfurt/Rhein-Main, inkl. Demos) | iCalendar |
 | Eigene Kalender | iCalendar oder schema.org |
 
 Für Frankfurt gibt es keinen offenen städtischen Kalender (frankfurt.de ist zudem gegen automatische Abrufe

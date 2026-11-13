@@ -70,15 +70,23 @@ public enum BuiltInSources {
     /// Ausgewählte Orte mit offenem Kalender (iCal oder schema.org). Lassen sich in den Einstellungen abschalten.
     public static let recommendedFeeds: [ICalFeed] = [
         ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1001")!, name: "Haus Mainusch",
-                 url: URL(string: "https://haus-mainusch.de/events.ics")!, city: .mainz),
+                 url: URL(string: "https://haus-mainusch.de/events.ics")!, city: .mainz,
+                 defaultVenue: "Haus Mainusch"),
         ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1002")!,
                  name: "Haus des Erinnerns – für Demokratie und Akzeptanz",
-                 url: URL(string: "https://www.haus-des-erinnerns-mainz.de/events/?ical=1")!, city: .mainz),
+                 url: URL(string: "https://www.haus-des-erinnerns-mainz.de/events/?ical=1")!, city: .mainz,
+                 defaultVenue: "Haus des Erinnerns"),
         ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1003")!, name: "Kulturbäckerei Mainz",
-                 url: URL(string: "https://kulturbaeckerei-mainz.de/veranstaltung/feed/ical/")!, city: .mainz),
+                 url: URL(string: "https://kulturbaeckerei-mainz.de/veranstaltung/feed/ical/")!, city: .mainz,
+                 defaultVenue: "Kulturbäckerei"),
         ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1004")!, name: "Kreativfabrik Wiesbaden",
-                 url: URL(string: "https://kreativfabrik-wiesbaden.de/veranstaltungen/?ical=1")!, city: .wiesbaden),
+                 url: URL(string: "https://kreativfabrik-wiesbaden.de/veranstaltungen/?ical=1")!, city: .wiesbaden,
+                 defaultVenue: "Kreativfabrik"),
         ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1005")!, name: "ZOOM Frankfurt",
-                 url: URL(string: "https://zoomfrankfurt.com/")!, city: .frankfurt)
+                 url: URL(string: "https://zoomfrankfurt.com/")!, city: .frankfurt, defaultVenue: "ZOOM"),
+        // Linkes Terminportal für Frankfurt und Umgebung: Vorträge, Filme, Gedenken, Demos.
+        ICalFeed(id: UUID(uuidString: "6B1D4C8E-1A10-4C2B-9E61-2F6F0A6C1006")!, name: "Frankfurter Info",
+                 url: URL(string: "https://www.frankfurter-info.org/termine/@@event_listing_ical?mode=future")!,
+                 city: .frankfurt)
     ]
 }

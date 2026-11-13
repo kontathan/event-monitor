@@ -79,10 +79,19 @@ struct SidebarView: View {
                         .tag(SidebarSelection.interests)
                         .help(model.settings.interests.map(\.title).sorted().joined(separator: ", "))
                 }
+                // Demos haben einen festen Platz – auch wenn gerade keine angekündigt ist.
+                Label {
+                    Text("Demos")
+                } icon: {
+                    Image(systemName: EventCategory.demo.symbol).foregroundStyle(EventCategory.demo.color)
+                }
+                .badge(counts[.demo, default: 0])
+                .tag(SidebarSelection.category(.demo))
+                .help(EventCategory.demo.title)
             }
 
             Section("Kategorien") {
-                ForEach(EventCategory.allCases) { category in
+                ForEach(EventCategory.allCases.filter { $0 != .demo }) { category in
                     let count = counts[category, default: 0]
                     if count > 0 || model.sidebarSelection == .category(category) || model.isInterest(category) {
                         Label {

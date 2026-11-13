@@ -77,8 +77,38 @@ import Testing
         ("Mahnwache für den Frieden", .demo),
         ("Demokratie braucht Bildung – Vortrag", .politik),
         ("Krempelmarkt am Rheinufer", .markt),
+        ("PRÜF-Demo: Rechtsextreme Parteien prüfen!", .demo),
+        ("Internationaler Jugendstreik", .demo),
+        ("Gedenkkundgebung zum Tag gegen patriarchale Gewalt", .demo),
+        ("Streiken wie in Frankreich", .sonstiges),
     ])
     func categorizes(title: String, expected: EventCategory) {
         #expect(Categorizer.category(kicker: nil, title: title, text: nil) == expected)
+    }
+}
+
+@Suite struct CityAndVenueTests {
+    @Test(arguments: [
+        ("Kranzplatz, Wiesbaden", City?.some(.wiesbaden)),
+        ("Rheinallee 111a, 55118 Mainz", .some(.mainz)),
+        ("Club Voltaire, Kleine Hochstr. 5, 60313 Frankfurt", .some(.frankfurt)),
+        ("Mainzer Landstraße 50", nil),
+        ("Haus Mainusch", nil),
+    ] as [(String, City?)])
+    func detectsCity(address: String, expected: City?) {
+        #expect(City.detect(in: address) == expected)
+    }
+
+    @Test func feedFillsVenueAndCity() {
+        let feed = ICalFeed(name: "Test", url: URL(string: "https://example.org/x.ics")!, city: .frankfurt,
+                            defaultVenue: "Haus Mainusch")
+        let source = ICalEventSource(feed: feed)
+        let noVenue = Event(id: "1", seriesID: "s", title: "Konzert", city: .frankfurt, start: .now, sourceID: "t")
+        #expect(source.completed(noVenue).venue == "Haus Mainusch")
+
+        let inWiesbaden = Event(id: "2", seriesID: "s", title: "PRÜF-Demo", venue: "Kranzplatz, Wiesbaden",
+                                city: .frankfurt, start: .now, sourceID: "t")
+        #expect(source.completed(inWiesbaden).city == .wiesbaden)
+        #expect(source.completed(inWiesbaden).category == .demo)
     }
 }

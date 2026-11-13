@@ -251,6 +251,15 @@ public struct ICalEventSource: EventSource {
         let events = text.contains("BEGIN:VCALENDAR")
             ? ICalendar.parse(text, city: feed.city, sourceID: id)
             : SchemaOrgEvents.parse(html: text, baseURL: feed.url, city: feed.city, sourceID: id)
-        return events.filter { $0.start <= horizon }
+        return events.filter { $0.start <= horizon }.map(completed)
+    }
+
+    /// Fehlenden Ort ergänzen und die Stadt aus der Adresse übernehmen
+    /// (regionale Kalender wie die Frankfurter Info listen auch Termine in Mainz oder Wiesbaden).
+    func completed(_ event: Event) -> Event {
+        var event = event
+        if event.venue == nil { event.venue = feed.defaultVenue }
+        if let detected = City.detect(in: event.venue) { event.city = detected }
+        return event.recategorized()
     }
 }

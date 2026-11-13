@@ -7,12 +7,16 @@ public struct ICalFeed: Codable, Identifiable, Hashable, Sendable {
     public var url: URL
     public var city: City
     public var isEnabled: Bool
+    /// Ort für Termine, deren Feed keinen eigenen Ort nennt (z. B. „Haus Mainusch“).
+    public var defaultVenue: String?
 
-    public init(id: UUID = UUID(), name: String, url: URL, city: City, isEnabled: Bool = true) {
+    public init(id: UUID = UUID(), name: String, url: URL, city: City, defaultVenue: String? = nil,
+                isEnabled: Bool = true) {
         self.id = id
         self.name = name
         self.url = url
         self.city = city
+        self.defaultVenue = defaultVenue
         self.isEnabled = isEnabled
     }
 

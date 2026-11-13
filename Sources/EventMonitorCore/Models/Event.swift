@@ -15,6 +15,26 @@ public enum City: String, Codable, CaseIterable, Identifiable, Sendable {
         case .frankfurt: "Frankfurt"
         }
     }
+
+    /// Erkennt die Stadt in einer Adresse – über das Wort selbst oder die Postleitzahl.
+    /// „Mainzer Landstraße“ (Frankfurt) zählt bewusst nicht als Mainz.
+    public static func detect(in address: String?) -> City? {
+        guard let address else { return nil }
+        let words = address.searchFolded.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        for word in words {
+            switch word {
+            case "mainz": return .mainz
+            case "wiesbaden": return .wiesbaden
+            case "frankfurt": return .frankfurt
+            default:
+                guard word.count == 5, let plz = Int(word) else { continue }
+                if (55116...55131).contains(plz) { return .mainz }
+                if (65183...65207).contains(plz) { return .wiesbaden }
+                if (60306...60599).contains(plz) || (65929...65936).contains(plz) { return .frankfurt }
+            }
+        }
+        return nil
+    }
 }
 
 /// Ein einzelner Termin einer Veranstaltung.

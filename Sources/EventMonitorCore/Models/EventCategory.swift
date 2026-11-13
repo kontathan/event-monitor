@@ -74,7 +74,9 @@ public enum Categorizer {
     /// („=geschichte“ trifft „Geschichte“, aber nicht „Geschichten“).
     static let rules: [(EventCategory, [String])] = [
         (.demo, ["=demo", "demonstration", "kundgebung", "mahnwache", "^protestmarsch", "^protestaktion",
-                 "^streik", "warnstreik", "klimastreik", "critical mass", "menschenkette",
+                 "fahrraddemo", "raddemo", "laternendemo", "klimademo", "friedensdemo", "^demozug", "gegenprotest",
+                 "warnstreik", "klimastreik", "jugendstreik", "schulstreik", "generalstreik", "frauenstreik",
+                 "critical mass", "menschenkette", "lichtermeer", "sonntagsspaziergang",
                  "^blockade", "sitzblockade", "ostermarsch", "=csd", "christopher street day", "^aufstehen gegen"]),
         (.markt, ["flohmarkt", "trodel", "krempel", "basar", "bazar", "markt", "kleiderborse", "spielzeugborse"]),
         (.kino, ["kino", "^film", "screening", "cinema"]),
